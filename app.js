@@ -1,6 +1,16 @@
 import * as readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import validator from "validator";
+import fs from "fs";
+
+const path = "./data";
+let fileExists = fs.existsSync("./data/contacts.json");
+console.log(fileExists);
+
+if (!fileExists) {
+  fs.mkdirSync(path, { recursive: true });
+  fs.writeFileSync("./data/contacts.json", "[]");
+}
 
 const rl = readline.createInterface({ input, output });
 
@@ -22,8 +32,11 @@ do {
   }
 } while (email_validator === false);
 
-console.log(`Your name: ${name}`);
-console.log(`Your phone: ${phone}, ${validator.isMobilePhone(phone)}`);
-console.log(`Your email: ${email}, ${validator.isEmail(email)}`);
-
 rl.close();
+
+const data = { name, phone, email };
+
+const file = fs.readFileSync("data/contacts.json", "utf-8");
+const contacts = JSON.parse(file);
+contacts.push(data);
+fs.writeFileSync("data/contacts.json", JSON.stringify(contacts));

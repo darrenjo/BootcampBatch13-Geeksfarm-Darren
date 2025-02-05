@@ -1,0 +1,25 @@
+{
+  "name": "4.-npm",
+  "version": "1.0.0",
+  "description": "Learn NPM",
+  "main": "app.js",
+  "type": "module",
+  "scripts": {
+    "start": "node tugas.js",
+    "fol": "ls",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/darrenjo/BootcampBatch13-Geeksfarm-Darren.git"
+  },
+  "author": "Darren",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/darrenjo/BootcampBatch13-Geeksfarm-Darren/issues"
+  },
+  "homepage": "https://github.com/darrenjo/BootcampBatch13-Geeksfarm-Darren#readme",
+  "dependencies": {
+    "validator": "^13.12.0"
+  }
+}

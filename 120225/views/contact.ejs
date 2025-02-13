@@ -1,0 +1,15 @@
+<body>
+    <h1>Contact us</h1>
+    <% if (cont.length < 1) { %>
+        <p>none</p>
+    <% } else { %>
+
+        <ul>
+            <% cont.forEach(data => { %>
+                <li><%=data.nama  %> <%=data.email  %></li>
+            <% }) %>
+        </ul>
+    <% } %>
+
+    
+</body>

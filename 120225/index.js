@@ -7,6 +7,9 @@ import fs from "fs";
 import moment from "moment-timezone";
 
 const app = express();
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 const port = 3000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,11 +38,15 @@ app.use(
 //   next();
 // });
 
+const contactFile = path.join(process.cwd(), "data", "contacts.json");
+
 // Function to read contacts from JSON
 const getContacts = () => {
-  const dataPath = path.join(process.cwd(), "data", "contacts.json");
-  const data = fs.readFileSync(dataPath, "utf-8");
-  return JSON.parse(data);
+  return JSON.parse(fs.readFileSync(contactFile, "utf-8"));
+};
+
+const saveContacts = (contacts) => {
+  fs.writeFileSync(contactFile, JSON.stringify(contacts, null, 2), "utf8");
 };
 
 // Routes
@@ -59,6 +66,54 @@ app.get("/about", (req, res) => {
 app.get("/contact", (req, res) => {
   const cont = getContacts();
   res.render("contact", { cont, title: "Contact" });
+});
+
+app.post("/contact/update", (req, res) => {
+  const { oldName, newName, newEmail, newPhone } = req.body;
+  let contacts = getContacts();
+
+  contacts = contacts.map((c) =>
+    c.name === oldName
+      ? {
+          ...c,
+          name: newName || c.name,
+          email: newEmail || c.email,
+          phone: newPhone || c.phone,
+        }
+      : c
+  );
+
+  saveContacts(contacts);
+  res.json({ message: "Contact updated successfully!" });
+});
+
+app.post("/contact/delete", express.json(), (req, res) => {
+  const { name } = req.body;
+  let contacts = getContacts();
+
+  const newContacts = contacts.filter((c) => c.name !== name);
+
+  if (contacts.length === newContacts.length) {
+    return res.status(404).send("Contact not found!");
+  }
+
+  saveContacts(newContacts);
+  res.status(200).send("Deleted contact");
+});
+
+app.post("/contact/add", (req, res) => {
+  const { name, phone, email } = req.body;
+
+  if (!name || !email) {
+    return res.status(400).json({ error: "Name and Email are required!" });
+  }
+
+  let contacts = getContacts();
+
+  contacts.push({ name, phone, email });
+  saveContacts(contacts);
+
+  res.status(201).json({ message: "Contact added successfully!" });
 });
 
 // 404 Handler

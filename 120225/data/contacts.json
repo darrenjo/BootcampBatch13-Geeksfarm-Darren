@@ -1,8 +1,8 @@
 [
   {
-    "name": "budi",
-    "phone": "085154841111",
-    "email": "budi@mail.com"
+    "name": "budi baru",
+    "phone": "002121515",
+    "email": "budibaru@mail.com"
   },
   {
     "name": "tono",
@@ -10,18 +10,13 @@
     "email": "updated@tono.com"
   },
   {
-    "name": "test",
-    "phone": "08198566488",
-    "email": "test@mail.com"
-  },
-  {
-    "name": "test3",
-    "phone": "08198784848",
-    "email": "test3@mail.com"
-  },
-  {
     "name": "albert",
     "phone": "08154545151",
     "email": "albert@mail.com"
+  },
+  {
+    "name": "asd",
+    "phone": "21323132",
+    "email": "asd@mail.com"
   }
 ]

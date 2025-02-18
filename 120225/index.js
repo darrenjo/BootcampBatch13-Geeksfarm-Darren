@@ -5,6 +5,7 @@ import expressLayouts from "express-ejs-layouts";
 import morgan from "morgan";
 import fs from "fs";
 import moment from "moment-timezone";
+import { body, validationResult } from "express-validator";
 
 const app = express();
 app.use(express.json());
@@ -33,11 +34,6 @@ app.use(
   )
 );
 
-// app.use((req, res, next) => {
-//   console.log("morgan runs well");
-//   next();
-// });
-
 const contactFile = path.join(process.cwd(), "data", "contacts.json");
 
 // Function to read contacts from JSON
@@ -57,8 +53,7 @@ app.get("/", (req, res) => {
 app.get("/about", (req, res) => {
   res.render("about", {
     title: "About Page from layout",
-    description:
-      "Highly creative and experienced graphic designer with more than 2 years of experience in managing design campaigns and projects by creating Facebook ad creatives, social media conceptualization, and more. I am passionate about working in a digital marketing agency where I can be involved in a team to deliver the best result for clients in all fields.",
+    description: "Highly creative and experienced graphic designer...",
     header: "About",
   });
 });
@@ -68,29 +63,101 @@ app.get("/contact", (req, res) => {
   res.render("contact", { cont, title: "Contact" });
 });
 
-app.post("/contact/update", (req, res) => {
-  const { oldName, newName, newEmail, newPhone } = req.body;
-  let contacts = getContacts();
+// Add Contact with Validation
+app.post(
+  "/contact/add",
+  [
+    body("name").notEmpty().withMessage("Name is required"),
+    body("name").custom((value) => {
+      const contacts = getContacts();
+      const nameExists = contacts.some(
+        (contact) => contact.name.toLowerCase() === value.toLowerCase()
+      );
+      if (nameExists) {
+        throw new Error("Name already exists");
+      }
+      return true;
+    }),
+    body("email").isEmail().withMessage("Invalid email format"),
+    body("email").custom((value) => {
+      const contacts = getContacts();
+      const emailExists = contacts.some(
+        (contact) => contact.email.toLowerCase() === value.toLowerCase()
+      );
+      if (emailExists) {
+        throw new Error("email already exists");
+      }
+      return true;
+    }),
+    body("phone").optional().isNumeric().withMessage("Phone must be numeric"),
+  ],
+  (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
 
-  contacts = contacts.map((c) =>
-    c.name === oldName
-      ? {
-          ...c,
-          name: newName || c.name,
-          email: newEmail || c.email,
-          phone: newPhone || c.phone,
-        }
-      : c
-  );
+    const { name, phone, email } = req.body;
+    let contacts = getContacts();
+    contacts.push({ name, phone, email });
+    saveContacts(contacts);
+    res.status(201).json({ message: "Contact added successfully!" });
+  }
+);
 
-  saveContacts(contacts);
-  res.json({ message: "Contact updated successfully!" });
-});
+// Update Contact with Validation
+app.post(
+  "/contact/update",
+  [
+    body("newName").notEmpty().withMessage("Name is required"),
+    body("newName").custom((value, { req }) => {
+      const { oldName } = req.body;
+      const contacts = getContacts();
+      const nameExists = contacts.some(
+        (contact) =>
+          contact.name.toLowerCase() === value.toLowerCase() &&
+          contact.name !== oldName
+      );
+      if (nameExists) {
+        throw new Error("Name already exists");
+      }
+      return true;
+    }),
+    body("newEmail").isEmail().withMessage("Invalid email format"),
+    body("newPhone")
+      .optional()
+      .isNumeric()
+      .withMessage("Phone must be numeric"),
+  ],
+  (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
 
-app.post("/contact/delete", express.json(), (req, res) => {
+    const { oldName, newName, newEmail, newPhone } = req.body;
+    let contacts = getContacts();
+
+    contacts = contacts.map((c) =>
+      c.name === oldName
+        ? {
+            ...c,
+            name: newName || c.name,
+            email: newEmail || c.email,
+            phone: newPhone || c.phone,
+          }
+        : c
+    );
+
+    saveContacts(contacts);
+    res.json({ message: "Contact updated successfully!" });
+  }
+);
+
+// Delete Contact
+app.post("/contact/delete", (req, res) => {
   const { name } = req.body;
   let contacts = getContacts();
-
   const newContacts = contacts.filter((c) => c.name !== name);
 
   if (contacts.length === newContacts.length) {
@@ -101,21 +168,6 @@ app.post("/contact/delete", express.json(), (req, res) => {
   res.status(200).send("Deleted contact");
 });
 
-app.post("/contact/add", (req, res) => {
-  const { name, phone, email } = req.body;
-
-  if (!name || !email) {
-    return res.status(400).json({ error: "Name and Email are required!" });
-  }
-
-  let contacts = getContacts();
-
-  contacts.push({ name, phone, email });
-  saveContacts(contacts);
-
-  res.status(201).json({ message: "Contact added successfully!" });
-});
-
 // 404 Handler
 app.use((req, res) => {
   res.status(404).render("notfound", { title: "404 Page not found" });
@@ -124,9 +176,3 @@ app.use((req, res) => {
 app.listen(port, () => {
   console.log(`Server is running on Port ${port}`);
 });
-
-// app.get("/product/:idProduct", (req, res) => {
-//   res.send(
-//     `product page with id: ${req.params.idProduct} and category: ${req.query.idCategory}`
-//   );
-// });

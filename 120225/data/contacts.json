@@ -1,15 +1,5 @@
 [
   {
-    "name": "budi baru",
-    "phone": "002121515",
-    "email": "budibaru@mail.com"
-  },
-  {
-    "name": "tono",
-    "phone": "08154875656",
-    "email": "updated@tono.com"
-  },
-  {
     "name": "albert",
     "phone": "08154545151",
     "email": "albert@mail.com"
@@ -18,5 +8,20 @@
     "name": "asd",
     "phone": "21323132",
     "email": "asd@mail.com"
+  },
+  {
+    "name": "zxc",
+    "phone": "123213",
+    "email": "zxc@mail.com"
+  },
+  {
+    "name": "d2dwq",
+    "phone": "1232133",
+    "email": "asdsw@mail.com"
+  },
+  {
+    "name": "tono",
+    "phone": "24543234",
+    "email": "tono@mail.com"
   }
 ]

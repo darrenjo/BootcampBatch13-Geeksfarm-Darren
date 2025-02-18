@@ -3,8 +3,9 @@
     <p class="text-center">No contacts available.</p>
     <% } else { %>
         <div class="d-flex justify-content-between mb-3">
-            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addContactModal">Add
-                Contact</button>
+            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addContactModal">
+                Add Contact
+            </button>
         </div>
 
         <table class="table table-bordered table-striped">
@@ -57,13 +58,16 @@
                                         aria-label="Close"></button>
                                 </div>
                                 <div class="modal-body">
-                                    <p><strong>Name:</strong>
+                                    <p>
+                                        <strong>Name:</strong>
                                         <%= data.name %>
                                     </p>
-                                    <p><strong>Email:</strong>
+                                    <p>
+                                        <strong>Email:</strong>
                                         <%= data.email %>
                                     </p>
-                                    <p><strong>Phone:</strong>
+                                    <p>
+                                        <strong>Phone:</strong>
                                         <%= data.phone %>
                                     </p>
                                 </div>
@@ -100,6 +104,7 @@
                                             <label for="newEmail" class="form-label">Email</label>
                                             <input type="email" class="form-control" id="newEmail" />
                                         </div>
+                                        <div id="updateContactError"></div>
                                         <button type="submit" class="btn btn-warning">Update</button>
                                     </form>
                                 </div>
@@ -121,23 +126,26 @@
                                     <form id="addContactForm">
                                         <div class="mb-3">
                                             <label for="newContactName" class="form-label">Name</label>
-                                            <input type="text" class="form-control" id="newContactName" required>
+                                            <input type="text" class="form-control" id="newContactName" required />
+                                            <div class="text-danger" id="nameError"></div>
                                         </div>
                                         <div class="mb-3">
                                             <label for="newContactPhone" class="form-label">Phone</label>
-                                            <input type="text" class="form-control" id="newContactPhone" required>
+                                            <input type="text" class="form-control" id="newContactPhone" required />
+                                            <div class="text-danger" id="phoneError"></div>
                                         </div>
                                         <div class="mb-3">
                                             <label for="newContactEmail" class="form-label">Email</label>
-                                            <input type="email" class="form-control" id="newContactEmail" required>
+                                            <input type="email" class="form-control" id="newContactEmail" required />
+                                            <div class="text-danger" id="emailError"></div>
                                         </div>
+                                        <div id="addContactError"></div>
                                         <button type="submit" class="btn btn-success">Add Contact</button>
                                     </form>
                                 </div>
                             </div>
                         </div>
                     </div>
-
                     <% }) %>
             </tbody>
         </table>
@@ -155,26 +163,44 @@
 
                 document
                     .getElementById("updateForm")
-                    .addEventListener("submit", function (event) {
+                    .addEventListener("submit", async function (event) {
                         event.preventDefault();
 
                         const oldName = document.getElementById("oldName").value;
                         const newName = document.getElementById("newName").value.trim();
                         const newEmail = document.getElementById("newEmail").value.trim();
-                        const newPhoneInput = document.getElementById("newPhone");
+                        const newPhone = document.getElementById("newPhone").value.trim();
+                        const errorContainer = document.getElementById("updateContactError");
 
-                        const newPhone = newPhoneInput ? newPhoneInput.value.trim() : null;
+                        errorContainer.innerHTML = "";
 
                         const updatedData = { oldName };
                         if (newName) updatedData.newName = newName;
                         if (newEmail) updatedData.newEmail = newEmail;
                         if (newPhone) updatedData.newPhone = newPhone;
 
-                        fetch("/contact/update", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify(updatedData),
-                        }).then(() => location.reload());
+                        try {
+                            const response = await fetch("/contact/update", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify(updatedData),
+                            });
+
+                            const data = await response.json();
+
+                            if (!response.ok) {
+                                // express-validator error
+                                if (data.errors) {
+                                    throw new Error(data.errors.map((err) => err.msg).join("<br>"));
+                                }
+                                throw new Error(data.error || "Something went wrong");
+                            }
+
+                            location.reload();
+                        } catch (err) {
+                            console.error("Validation error:", err);
+                            errorContainer.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+                        }
                     });
 
                 function deleteContact(name) {
@@ -193,17 +219,39 @@
                     }
                 }
 
-                document.getElementById("addContactForm").addEventListener("submit", function (event) {
-                    event.preventDefault();
+                document
+                    .getElementById("addContactForm")
+                    .addEventListener("submit", async function (event) {
+                        event.preventDefault();
 
-                    const name = document.getElementById("newContactName").value;
-                    const phone = document.getElementById("newContactPhone").value;
-                    const email = document.getElementById("newContactEmail").value;
+                        const name = document.getElementById("newContactName").value.trim();
+                        const phone = document.getElementById("newContactPhone").value.trim();
+                        const email = document.getElementById("newContactEmail").value.trim();
+                        const errorContainer = document.getElementById("addContactError");
 
-                    fetch("/contact/add", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ name, phone, email })
-                    }).then(() => location.reload());
-                });
+                        errorContainer.innerHTML = "";
+
+                        try {
+                            const response = await fetch("/contact/add", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ name, phone, email }),
+                            });
+
+                            const data = await response.json();
+
+                            if (!response.ok) {
+                                // express-validator error
+                                if (data.errors) {
+                                    throw new Error(data.errors.map((err) => err.msg).join("<br>"));
+                                }
+                                throw new Error(data.error || "Something went wrong");
+                            }
+
+                            location.reload();
+                        } catch (err) {
+                            console.error("Validation error:", err);
+                            errorContainer.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+                        }
+                    });
             </script>

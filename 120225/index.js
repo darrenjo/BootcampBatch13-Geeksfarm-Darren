@@ -89,7 +89,10 @@ app.post(
       }
       return true;
     }),
-    body("phone").optional().isNumeric().withMessage("Phone must be numeric"),
+    body("phone")
+      .optional()
+      .isMobilePhone("id-ID")
+      .withMessage("Invalid phone number"),
   ],
   (req, res) => {
     const errors = validationResult(req);
@@ -126,8 +129,8 @@ app.post(
     body("newEmail").isEmail().withMessage("Invalid email format"),
     body("newPhone")
       .optional()
-      .isNumeric()
-      .withMessage("Phone must be numeric"),
+      .isMobilePhone("id-ID")
+      .withMessage("Invalid phone number"),
   ],
   (req, res) => {
     const errors = validationResult(req);

@@ -3,15 +3,18 @@ import path from "path";
 import { fileURLToPath } from "url";
 import expressLayouts from "express-ejs-layouts";
 import morgan from "morgan";
-import fs from "fs";
 import moment from "moment-timezone";
 import { body, validationResult } from "express-validator";
+import pool from "./config/db.js";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const port = 3000;
+const port = process.env.PORT;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -19,31 +22,18 @@ const __dirname = path.dirname(__filename);
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 app.use(expressLayouts);
-app.set("layout", "layouts/layout"); // Default layout file
-
+app.set("layout", "layouts/layout");
 app.use(express.static("public"));
 
 // Custom date format for Morgan (WIB / GMT+7)
-morgan.token("local-date", () => {
-  return moment().tz("Asia/Jakarta").format("YYYY-MM-DD HH:mm:ss");
-});
-
+morgan.token("local-date", () =>
+  moment().tz("Asia/Jakarta").format("YYYY-MM-DD HH:mm:ss")
+);
 app.use(
   morgan(
     ':local-date ":method :url :status :res[content-length] - :response-time ms"'
   )
 );
-
-const contactFile = path.join(process.cwd(), "data", "contacts.json");
-
-// Function to read contacts from JSON
-const getContacts = () => {
-  return JSON.parse(fs.readFileSync(contactFile, "utf-8"));
-};
-
-const saveContacts = (contacts) => {
-  fs.writeFileSync(contactFile, JSON.stringify(contacts, null, 2), "utf8");
-};
 
 // Routes
 app.get("/", (req, res) => {
@@ -52,123 +42,96 @@ app.get("/", (req, res) => {
 
 app.get("/about", (req, res) => {
   res.render("about", {
-    title: "About Page from layout",
-    description: "Highly creative and experienced graphic designer...",
+    title: "About Page",
+    description: "About Us",
     header: "About",
   });
 });
 
-app.get("/contact", (req, res) => {
-  const cont = getContacts();
-  res.render("contact", { cont, title: "Contact" });
+// Get all contacts
+app.get("/contact", async (req, res) => {
+  try {
+    const { rows } = await pool.query("SELECT * FROM contacts");
+    res.render("contact", { cont: rows, title: "Contact" });
+  } catch (err) {
+    res.status(500).send("Error fetching contacts");
+  }
 });
 
-// Add Contact with Validation
+// Add Contact
 app.post(
   "/contact/add",
   [
     body("name").notEmpty().withMessage("Name is required"),
-    body("name").custom((value) => {
-      const contacts = getContacts();
-      const nameExists = contacts.some(
-        (contact) => contact.name.toLowerCase() === value.toLowerCase()
-      );
-      if (nameExists) {
-        throw new Error("Name already exists");
-      }
-      return true;
-    }),
     body("email").isEmail().withMessage("Invalid email format"),
-    body("email").custom((value) => {
-      const contacts = getContacts();
-      const emailExists = contacts.some(
-        (contact) => contact.email.toLowerCase() === value.toLowerCase()
-      );
-      if (emailExists) {
-        throw new Error("email already exists");
-      }
-      return true;
-    }),
     body("phone")
       .optional()
       .isMobilePhone("id-ID")
       .withMessage("Invalid phone number"),
   ],
-  (req, res) => {
+  async (req, res) => {
     const errors = validationResult(req);
-    if (!errors.isEmpty()) {
+    if (!errors.isEmpty())
       return res.status(400).json({ errors: errors.array() });
-    }
 
-    const { name, phone, email } = req.body;
-    let contacts = getContacts();
-    contacts.push({ name, phone, email });
-    saveContacts(contacts);
-    res.status(201).json({ message: "Contact added successfully!" });
+    try {
+      const { name, email, phone } = req.body;
+      await pool.query(
+        "INSERT INTO contacts (name, email, phone) VALUES ($1, $2, $3)",
+        [name, email, phone]
+      );
+      res.status(201).json({ message: "Contact added successfully!" });
+    } catch (err) {
+      res.status(500).json({ error: "Database error" });
+    }
   }
 );
 
-// Update Contact with Validation
+// Update Contact
 app.post(
   "/contact/update",
   [
     body("newName").notEmpty().withMessage("Name is required"),
-    body("newName").custom((value, { req }) => {
-      const { oldName } = req.body;
-      const contacts = getContacts();
-      const nameExists = contacts.some(
-        (contact) =>
-          contact.name.toLowerCase() === value.toLowerCase() &&
-          contact.name !== oldName
-      );
-      if (nameExists) {
-        throw new Error("Name already exists");
-      }
-      return true;
-    }),
     body("newEmail").isEmail().withMessage("Invalid email format"),
     body("newPhone")
       .optional()
       .isMobilePhone("id-ID")
       .withMessage("Invalid phone number"),
   ],
-  (req, res) => {
+  async (req, res) => {
     const errors = validationResult(req);
-    if (!errors.isEmpty()) {
+    if (!errors.isEmpty())
       return res.status(400).json({ errors: errors.array() });
+
+    try {
+      const { oldName, newName, newEmail, newPhone } = req.body;
+      const { rowCount } = await pool.query(
+        "UPDATE contacts SET name = $1, email = $2, phone = $3 WHERE name = $4",
+        [newName, newEmail, newPhone, oldName]
+      );
+      if (rowCount === 0)
+        return res.status(404).json({ error: "Contact not found" });
+      res.json({ message: "Contact updated successfully!" });
+    } catch (err) {
+      res.status(500).json({ error: "Database error" });
     }
-
-    const { oldName, newName, newEmail, newPhone } = req.body;
-    let contacts = getContacts();
-
-    contacts = contacts.map((c) =>
-      c.name === oldName
-        ? {
-            ...c,
-            name: newName || c.name,
-            email: newEmail || c.email,
-            phone: newPhone || c.phone,
-          }
-        : c
-    );
-
-    saveContacts(contacts);
-    res.json({ message: "Contact updated successfully!" });
   }
 );
 
 // Delete Contact
-app.post("/contact/delete", (req, res) => {
-  const { name } = req.body;
-  let contacts = getContacts();
-  const newContacts = contacts.filter((c) => c.name !== name);
-
-  if (contacts.length === newContacts.length) {
-    return res.status(404).send("Contact not found!");
+app.post("/contact/delete", async (req, res) => {
+  try {
+    const { name } = req.body;
+    const { rowCount } = await pool.query(
+      "DELETE FROM contacts WHERE name = $1",
+      [name]
+    );
+    if (rowCount === 0)
+      return res.status(404).json({ error: "Contact not found" });
+    res.status(200).send("Deleted contact");
+  } catch (err) {
+    res.status(500).json({ error: "Database error" });
   }
-
-  saveContacts(newContacts);
-  res.status(200).send("Deleted contact");
 });
 
 // 404 Handler

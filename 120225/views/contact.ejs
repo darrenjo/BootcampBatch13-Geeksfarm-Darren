@@ -1,5 +1,9 @@
 <h1 class="text-center">Contact Us</h1>
+
 <% if (cont.length < 1) { %>
+    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addContactModal">
+        Add Contact
+    </button>
     <p class="text-center">No contacts available.</p>
     <% } else { %>
         <div class="d-flex justify-content-between mb-3">

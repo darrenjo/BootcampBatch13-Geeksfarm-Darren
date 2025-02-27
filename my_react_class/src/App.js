@@ -4,6 +4,8 @@ import Comment from "./Comment";
 import { getComments } from "./getdata";
 import Counting from "./buttonClick";
 import Clock from "./clock";
+import Form from "./form";
+import UnsplashSearch from "./unsplash";
 
 class App extends Component {
   constructor(props) {
@@ -16,6 +18,9 @@ class App extends Component {
   render() {
     return (
       <>
+        <UnsplashSearch />
+        <br></br>
+        <Form />
         <Clock />
         <Nav />
         <Counting />

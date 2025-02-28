@@ -1,10 +1,13 @@
-import React, { useState } from "react";
+import React, { createRef, useState } from "react";
 import axios from "axios";
+import Masonry from "react-masonry-css";
+import "./styles/masonry.css";
 
 const UnsplashSearch = () => {
   const [query, setQuery] = useState("");
   const [count, setCount] = useState(1);
   const [images, setImages] = useState([]);
+  const imageRefs = images.map(() => createRef());
 
   const fetchImages = async (event) => {
     event.preventDefault();
@@ -41,18 +44,24 @@ const UnsplashSearch = () => {
         />
         <button type="submit">Search</button>
       </form>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-        {images.map((image) => (
-          <img
-            id={image.id}
-            src={image.urls.small}
-            alt={image.slug}
-            alt2={image.alternative_slugs.ko}
-            link={image.links.html}
-            style={{ width: "200px", height: "auto" }}
-          />
+      <Masonry
+        breakpointCols={{ default: 4, 1100: 3, 700: 2, 500: 1 }}
+        className="masonry-grid"
+        columnClassName="masonry-grid_column"
+      >
+        {images.map((image, index) => (
+          <div key={image.id} ref={imageRefs[index]} className="masonry-item">
+            <img
+              id={image.id}
+              src={image.urls.regular}
+              alt={image.slug}
+              alt2={image.alternative_slugs.ko}
+              link={image.links.html}
+              style={{ width: "100%", borderRadius: "10px", display: "block" }}
+            />
+          </div>
         ))}
-      </div>
+      </Masonry>
     </div>
   );
 };
